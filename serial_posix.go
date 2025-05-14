@@ -1,3 +1,4 @@
+//go:build darwin || linux || freebsd || openbsd || netbsd
 // +build darwin linux freebsd openbsd netbsd
 
 package serial
@@ -54,6 +55,12 @@ func (p *port) Open(c *Config) (err error) {
 	if err != nil {
 		return
 	}
+
+	err = syscall.Flock(p.fd, syscall.LOCK_EX)
+	if err != nil {
+		return
+	}
+
 	// Backup current termios to restore on closing.
 	p.backupTermios()
 	if err = p.setTermios(termios); err != nil {
@@ -76,6 +83,9 @@ func (p *port) Close() (err error) {
 		return
 	}
 	p.restoreTermios()
+
+	err = syscall.Flock(p.fd, syscall.LOCK_UN)
+
 	err = syscall.Close(p.fd)
 	p.fd = -1
 	p.oldTermios = nil
